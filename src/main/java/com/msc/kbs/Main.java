@@ -7,10 +7,29 @@ import com.pi4j.io.gpio.GpioPinDigitalOutput;
 import com.pi4j.io.gpio.PinPullResistance;
 import com.pi4j.io.gpio.PinState;
 import com.pi4j.io.gpio.RaspiPin;
+import java.io.File;
+import java.io.FileReader;
+import java.util.Arrays;
+import java.util.Properties;
 
 public class Main {
 
+    static Properties sounds;
+
     public static void main(String[] args) {
+
+        sounds = new Properties();
+
+        try {
+            sounds.load(new FileReader(new File("sounds-config.properties")));
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
+        String folder = sounds.getProperty("folder");
+        String debut = "cvlc";
+        String fileSound[] = new String[2];
+        fileSound[0] = debut;
         final GpioController gpio = GpioFactory.getInstance();
         GpioPinDigitalOutput pin21 = gpio.provisionDigitalOutputPin(RaspiPin.GPIO_21, "21", PinState.LOW);
         GpioPinDigitalOutput pin22 = gpio.provisionDigitalOutputPin(RaspiPin.GPIO_22, "22", PinState.LOW);
@@ -36,6 +55,7 @@ public class Main {
         boolean run = true;
         String tmp = "";
         GpioPinDigitalOutput po;
+        int nbTour = 0;
         while (run) {
             for (int i = 0; i < pinsOut.length; i++) {
                 po = pinsOut[i];
@@ -46,19 +66,29 @@ public class Main {
                         if (!rebond) {
                             tmp += traitement(i, j);
                             i = -1;
-                            try {
-                                Thread.sleep(250);
-                            } catch (Exception e) {
-                            }
+                            nbTour = 0;
                         }
                         rebond = true;
                     }
                     rebond = false;
                 }
                 po.low();
+                nbTour++;
             }
-            if (!tmp.isEmpty()) {
+            if (!tmp.isEmpty() && nbTour >= 5000) {
                 System.out.println(tmp);
+                nbTour = 0;
+                fileSound[1] = folder + sounds.getProperty(tmp);
+                System.out.println(Arrays.toString(fileSound));
+                try {
+                    ProcessBuilder processBuilder = new ProcessBuilder();
+                    processBuilder.command("bash", "-c", "cvlc " + fileSound[1]);
+                    Process process = processBuilder.start();
+                    process.waitFor();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                tmp = "";
             }
 
         }
