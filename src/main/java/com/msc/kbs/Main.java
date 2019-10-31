@@ -7,29 +7,55 @@ import com.pi4j.io.gpio.GpioPinDigitalOutput;
 import com.pi4j.io.gpio.PinPullResistance;
 import com.pi4j.io.gpio.PinState;
 import com.pi4j.io.gpio.RaspiPin;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.util.Arrays;
+import java.io.IOException;
+import java.util.List;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Main {
 
     static Properties sounds;
 
+    private static String[] getEnv(){
+        
+        String[] str = null;
+        FileReader fr = null;
+        try {
+            fr = new FileReader("env.txt");
+            BufferedReader br = new BufferedReader(fr);
+            str = br.lines().toArray(String[]::new);
+        } catch (FileNotFoundException ex) {
+            ex.printStackTrace();
+            System.exit(1);
+        } finally {
+            try {
+                fr.close();
+            } catch (IOException ex) {
+            
+            }
+        }
+        return str;
+    }
+    
+    
     public static void main(String[] args) {
 
         sounds = new Properties();
-
+        String[] env = getEnv();
         try {
             sounds.load(new FileReader(new File("sounds-config.properties")));
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(1);
         }
-        String folder = sounds.getProperty("folder");
-        String debut = "cvlc";
-        String fileSound[] = new String[2];
-        fileSound[0] = debut;
+        
+        
+        
         final GpioController gpio = GpioFactory.getInstance();
         GpioPinDigitalOutput pin21 = gpio.provisionDigitalOutputPin(RaspiPin.GPIO_21, "21", PinState.LOW);
         GpioPinDigitalOutput pin22 = gpio.provisionDigitalOutputPin(RaspiPin.GPIO_22, "22", PinState.LOW);
@@ -75,16 +101,16 @@ public class Main {
                 po.low();
                 nbTour++;
             }
-            if (!tmp.isEmpty() && nbTour >= 5000) {
+            if (!tmp.isEmpty() && nbTour >= 3000) {
                 System.out.println(tmp);
-                nbTour = 0;
-                fileSound[1] = folder + sounds.getProperty(tmp);
-                System.out.println(Arrays.toString(fileSound));
+                nbTour = 0;                
                 try {
-                    ProcessBuilder processBuilder = new ProcessBuilder();
-                    processBuilder.command("bash", "-c", "cvlc " + fileSound[1]);
-                    Process process = processBuilder.start();
-                    process.waitFor();
+                    Runtime rt = Runtime.getRuntime();
+                    String line = "bash ./go.sh "+sounds.getProperty(tmp);
+                    System.out.println(line);
+                    Process process = rt.exec(line, env, new File("."));
+                    int i = process.waitFor();
+                    System.out.println(i);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
