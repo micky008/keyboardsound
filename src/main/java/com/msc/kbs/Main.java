@@ -101,7 +101,7 @@ public class Main {
                 po.low();
                 nbTour++;
             }
-            if (!tmp.isEmpty() && nbTour >= 3000) {
+            if (!tmp.isEmpty() && nbTour >= 1500) {
                 System.out.println(tmp);
                 nbTour = 0;                
                 try {
